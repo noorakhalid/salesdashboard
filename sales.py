@@ -6,7 +6,7 @@ import plotly.graph_objects as go
 # Page configuration
 st.set_page_config(page_title="EliteLiving Sales Dashboard", page_icon="💎", layout="wide")
 
-# Custom Dark Theme & High Contrast Mobile Friendly Styling
+# Custom Dark Theme & High Contrast Styling
 st.markdown("""
     <style>
     .stApp {
@@ -15,7 +15,6 @@ st.markdown("""
         font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
     }
     
-    /* Standard text and labels high contrast for mobile */
     p, span, label, div, .stMarkdown {
         color: #ffffff !important;
     }
@@ -64,6 +63,7 @@ st.markdown("""
         color: white;
         text-align: center;
         border: 1px solid #00f5d4;
+        margin-bottom: 10px;
     }
     .kpi-title {
         font-size: 13px;
@@ -92,53 +92,49 @@ st.markdown("""
     </div>
 """, unsafe_allow_html=True)
 
-# Load Data and Clean text to Lowercase inside app directly
+# Load Data and Clean Payment Method & Extract Year safely
 @st.cache_data
 def load_and_clean_data():
     df = pd.read_csv("Sales_transactions_2022_2025 (1).csv")
     
-    text_cols = [
-        'Customer_Name', 'Customer_Gender', 'Customer_Segment', 'Sales_Channel', 
-        'Store_Name', 'Country', 'Region', 'City', 'Product_Name', 
-        'Product_Category', 'Product_Subcategory', 'Payment_Method', 
-        'Order_Status', 'Shipping_Method', 'Return_Flag', 'Return_Reason', 
-        'Sales_Representative', 'Promotion_Code'
-    ]
-    
-    for col in text_cols:
-        if col in df.columns:
-            df[col] = df[col].astype(str).str.lower().str.strip().replace(['nan', 'none'], 'unknown')
-            
-    # Debit / Credit Card merge logic using pattern matching
     if 'Payment_Method' in df.columns:
-        df.loc[df['Payment_Method'].str.contains('debit', na=False), 'Payment_Method'] = 'debit card'
-        df.loc[df['Payment_Method'].str.contains('credit', na=False), 'Payment_Method'] = 'credit card'
+        df['Payment_Method'] = df['Payment_Method'].astype(str).str.strip()
+        df.loc[df['Payment_Method'].str.lower().str.contains('debit', na=False), 'Payment_Method'] = 'Debit Card'
+        df.loc[df['Payment_Method'].str.lower().str.contains('credit', na=False), 'Payment_Method'] = 'Credit Card'
             
-    df['Order_Date'] = pd.to_datetime(df['Order_Date'])
+    if 'Order_Date' in df.columns:
+        df['Order_Date'] = pd.to_datetime(df['Order_Date'])
+        df['Order_Year'] = df['Order_Date'].dt.year
+        
     return df
 
 df = load_and_clean_data()
 
-# Centered Filter Options
+# Filter Options
 st.subheader("🔍 filter options")
 f_col1, f_col2, f_col3 = st.columns([1, 2, 1])
 
+available_years = sorted(df['Order_Year'].dropna().unique()) if 'Order_Year' in df.columns else [2022]
+available_categories = ["All"] + list(df['Product_Category'].unique()) if 'Product_Category' in df.columns else ["All"]
+
 with f_col2:
-    selected_year = st.selectbox("select year", options=sorted(df['Order_Year'].unique()))
-    selected_category = st.selectbox("select product category", options=["all"] + list(df['Product_Category'].unique()))
+    selected_year = st.selectbox("select year", options=available_years)
+    selected_category = st.selectbox("select product category", options=available_categories)
 
 st.markdown("---")
 
-# Filter Data based on selection
-filtered_df = df[df['Order_Year'] == selected_year]
-if selected_category != "all":
+# Filter Data safely
+filtered_df = df.copy()
+if 'Order_Year' in filtered_df.columns:
+    filtered_df = filtered_df[filtered_df['Order_Year'] == selected_year]
+if selected_category != "All" and 'Product_Category' in filtered_df.columns:
     filtered_df = filtered_df[filtered_df['Product_Category'] == selected_category]
 
 # KPI CALCULATIONS
-total_sales = filtered_df['Sales_Amount'].sum()
-total_profit = filtered_df['Profit'].sum()
-total_orders = filtered_df['Transaction_ID'].nunique()
-avg_rating = filtered_df['Customer_Rating'].mean()
+total_sales = filtered_df['Sales_Amount'].sum() if 'Sales_Amount' in filtered_df.columns else 0
+total_profit = filtered_df['Profit'].sum() if 'Profit' in filtered_df.columns else 0
+total_orders = filtered_df['Transaction_ID'].nunique() if 'Transaction_ID' in filtered_df.columns else len(filtered_df)
+avg_rating = filtered_df['Customer_Rating'].mean() if 'Customer_Rating' in filtered_df.columns else 0.0
 if pd.isna(avg_rating):
     avg_rating = 0.0
 
@@ -183,7 +179,7 @@ with kpi4:
 st.markdown("---")
 
 # ---------------------------------------------------------
-# 2. 4 COLOURFUL GAUGES SECTION
+# 2. GAUGES SECTION
 # ---------------------------------------------------------
 st.subheader("🎯 performance gauges")
 
@@ -201,7 +197,7 @@ with g1:
             'steps': [{'range': [0, 2500000], 'color': "#1a1a2e"}, {'range': [2500000, 5000000], 'color': "#0f3460"}]
         }
     ))
-    fig_sales.update_layout(paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', font=dict(color='white'), height=200, margin=dict(t=30, b=10, l=10, r=10))
+    fig_sales.update_layout(paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', font=dict(color='white'), height=180, margin=dict(t=30, b=10, l=10, r=10))
     st.plotly_chart(fig_sales, use_container_width=True)
 
 with g2:
@@ -216,7 +212,7 @@ with g2:
             'steps': [{'range': [0, 500000], 'color': "#1b262c"}, {'range': [500000, 1000000], 'color': "#3282b8"}]
         }
     ))
-    fig_profit.update_layout(paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', font=dict(color='white'), height=200, margin=dict(t=30, b=10, l=10, r=10))
+    fig_profit.update_layout(paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', font=dict(color='white'), height=180, margin=dict(t=30, b=10, l=10, r=10))
     st.plotly_chart(fig_profit, use_container_width=True)
 
 with g3:
@@ -231,5 +227,102 @@ with g3:
             'steps': [{'range': [0, 5000], 'color': "#2d132c"}, {'range': [5000, 10000], 'color': "#801336"}]
         }
     ))
-    fig_orders.update_layout(paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', font=dict(color='white'), height=200, margin=dict(t=30, b=10, l=10, r=10))
+    fig_orders.update_layout(paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', font=dict(color='white'), height=180, margin=dict(t=30, b=10, l=10, r=10))
     st.plotly_chart(fig_orders, use_container_width=True)
+
+with g4:
+    fig_rating = go.Figure(go.Indicator(
+        mode = "gauge+number",
+        value = avg_rating,
+        number = {'valueformat': ".2f", 'suffix': " / 5", 'font': {'size': 14, 'color': 'white'}},
+        title = {'text': "customer rating", 'font': {'size': 14, 'color': '#00f5d4'}},
+        gauge = {
+            'axis': {'range': [0, 5], 'tickfont': {'color': 'white', 'size': 10}},
+            'bar': {'color': "#ff5722"},
+            'steps': [{'range': [0, 2.5], 'color': "#362fd9"}, {'range': [2.5, 5], 'color': "#780016"}]
+        }
+    ))
+    fig_rating.update_layout(paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', font=dict(color='white'), height=180, margin=dict(t=30, b=10, l=10, r=10))
+    st.plotly_chart(fig_rating, use_container_width=True)
+
+st.markdown("---")
+
+# ---------------------------------------------------------
+# 3. GRAPHS SECTION
+# ---------------------------------------------------------
+
+if 'Product_Category' in filtered_df.columns and 'Sales_Amount' in filtered_df.columns:
+    st.subheader("📈 top product categories by sales")
+    cat_sales = filtered_df.groupby('Product_Category')['Sales_Amount'].sum().reset_index()
+    fig_cat = go.Figure(data=[go.Bar(x=cat_sales['Product_Category'], y=cat_sales['Sales_Amount'], marker_color='#00adb5')])
+    fig_cat.update_layout(xaxis_title="product category", yaxis_title="sales amount (₹)", paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', font=dict(color='white'))
+    st.plotly_chart(fig_cat, use_container_width=True)
+    st.markdown("---")
+
+if 'Order_Date' in filtered_df.columns and 'Sales_Amount' in filtered_df.columns:
+    st.subheader("📉 sales trend over months")
+    filtered_df['Month'] = filtered_df['Order_Date'].dt.to_period('M').astype(str)
+    monthly_sales = filtered_df.groupby('Month')['Sales_Amount'].sum().reset_index()
+    fig_time = px.line(monthly_sales, x='Month', y='Sales_Amount', markers=True)
+    fig_time.update_layout(xaxis_title="month", yaxis_title="sales amount (₹)", paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', font=dict(color='white'))
+    st.plotly_chart(fig_time, use_container_width=True)
+    st.markdown("---")
+
+if 'Country' in filtered_df.columns and 'Sales_Amount' in filtered_df.columns:
+    st.subheader("🌍 country-wise performance")
+    country_sales = filtered_df.groupby('Country')['Sales_Amount'].sum().reset_index()
+    fig_country = px.pie(country_sales, names='Country', values='Sales_Amount')
+    fig_country.update_layout(paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', font=dict(color='white'))
+    st.plotly_chart(fig_country, use_container_width=True)
+    st.markdown("---")
+
+if 'Sales_Channel' in filtered_df.columns and 'Sales_Amount' in filtered_df.columns:
+    st.subheader("🛒 sales channel share")
+    channel_sales = filtered_df.groupby('Sales_Channel')['Sales_Amount'].sum().reset_index()
+    fig_channel = px.pie(channel_sales, names='Sales_Channel', values='Sales_Amount', hole=0.4)
+    fig_channel.update_layout(paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', font=dict(color='white'))
+    st.plotly_chart(fig_channel, use_container_width=True)
+    st.markdown("---")
+
+if 'Customer_Segment' in filtered_df.columns and 'Sales_Amount' in filtered_df.columns:
+    st.subheader("👥 customer segment sales")
+    segment_sales = filtered_df.groupby('Customer_Segment')['Sales_Amount'].sum().reset_index()
+    fig_segment = go.Figure(data=[go.Bar(x=segment_sales['Customer_Segment'], y=segment_sales['Sales_Amount'], marker_color='#ff9f1c')])
+    fig_segment.update_layout(xaxis_title="customer segment", yaxis_title="sales amount (₹)", paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', font=dict(color='white'))
+    st.plotly_chart(fig_segment, use_container_width=True)
+    st.markdown("---")
+
+if 'Payment_Method' in filtered_df.columns and 'Sales_Amount' in filtered_df.columns:
+    st.subheader("💳 payment methods analysis")
+    payment_sales = filtered_df.groupby('Payment_Method')['Sales_Amount'].sum().reset_index()
+    fig_payment = go.Figure(data=[go.Bar(x=payment_sales['Payment_Method'], y=payment_sales['Sales_Amount'], marker_color='#2ec4b6')])
+    fig_payment.update_layout(xaxis_title="payment method", yaxis_title="sales amount (₹)", paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', font=dict(color='white'))
+    st.plotly_chart(fig_payment, use_container_width=True)
+    st.markdown("---")
+
+# ---------------------------------------------------------
+# 4. SCATTER PLOT SECTION
+# ---------------------------------------------------------
+if 'Quantity' in filtered_df.columns and 'Sales_Amount' in filtered_df.columns:
+    st.subheader("📊 scatter plot: quantity vs sales amount")
+    fig_scatter = px.scatter(filtered_df, x='Quantity', y='Sales_Amount', color='Product_Category' if 'Product_Category' in filtered_df.columns else None, opacity=0.7)
+    fig_scatter.update_layout(xaxis_title="quantity", yaxis_title="sales amount (₹)", paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', font=dict(color='white'))
+    st.plotly_chart(fig_scatter, use_container_width=True)
+    st.markdown("---")
+
+# ---------------------------------------------------------
+# 5. BOX PLOT SECTION
+# ---------------------------------------------------------
+if 'Product_Category' in filtered_df.columns and 'Profit' in filtered_df.columns:
+    st.subheader("📦 box plot: profit distribution by product category")
+    fig_box = px.box(filtered_df, x='Product_Category', y='Profit', color='Product_Category')
+    fig_box.update_layout(xaxis_title="product category", yaxis_title="profit (₹)", paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', font=dict(color='white'), showlegend=False)
+    st.plotly_chart(fig_box, use_container_width=True)
+    st.markdown("---")
+
+# ---------------------------------------------------------
+# 6. FILTERED DATA TABLE SECTION
+# ---------------------------------------------------------
+st.subheader("📋 detailed transactions data table")
+st.markdown("filtered records based on your selected year and category:")
+st.dataframe(filtered_df, use_container_width=True)
