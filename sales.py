@@ -6,13 +6,18 @@ import plotly.graph_objects as go
 # Page configuration
 st.set_page_config(page_title="EliteLiving Sales Dashboard", page_icon="💎", layout="wide")
 
-# Custom Dark Theme & Colorful EliteLiving Logo Styling
+# Custom Dark Theme & High Contrast Mobile Friendly Styling
 st.markdown("""
     <style>
     .stApp {
         background-color: #0e1117;
         color: #ffffff;
         font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    }
+    
+    /* Standard text and labels high contrast for mobile */
+    p, span, label, div, .stMarkdown {
+        color: #ffffff !important;
     }
     
     .logo-container {
@@ -58,26 +63,26 @@ st.markdown("""
         box-shadow: 0 4px 15px rgba(0,0,0,0.5);
         color: white;
         text-align: center;
-        border: 1px solid #283747;
+        border: 1px solid #00f5d4;
     }
     .kpi-title {
         font-size: 13px;
         text-transform: uppercase;
         letter-spacing: 1px;
-        color: #a7bbc7;
+        color: #00f5d4 !important;
         margin-bottom: 8px;
-        font-weight: 600;
+        font-weight: 700;
     }
     .kpi-value {
         font-size: 22px;
         font-weight: bold;
-        color: #ffffff;
+        color: #ffffff !important;
     }
     
     h1, h2, h3, h4, h5, h6 {
         text-transform: uppercase;
         letter-spacing: 1px;
-        color: #ffffff !important;
+        color: #00f5d4 !important;
     }
     </style>
 
@@ -103,6 +108,13 @@ def load_and_clean_data():
     for col in text_cols:
         if col in df.columns:
             df[col] = df[col].astype(str).str.lower().replace(['nan', 'none'], 'unknown')
+            
+    # Cleaning 'Payment_Method' column specifically for debit card / credit card issues
+    if 'Payment_Method' in df.columns:
+        df['Payment_Method'] = df['Payment_Method'].replace({
+            'debitcard': 'debit card',
+            'creditcard': 'credit card'
+        })
             
     df['Order_Date'] = pd.to_datetime(df['Order_Date'])
     return df
@@ -133,7 +145,7 @@ if pd.isna(avg_rating):
     avg_rating = 0.0
 
 # ---------------------------------------------------------
-# 1. KPI CARDS SECTION (4 COLUMNS STRAIGHT LINE - ₹ RUPEE)
+# 1. KPI CARDS SECTION
 # ---------------------------------------------------------
 kpi1, kpi2, kpi3, kpi4 = st.columns(4)
 
@@ -173,7 +185,7 @@ with kpi4:
 st.markdown("---")
 
 # ---------------------------------------------------------
-# 2. 4 COLOURFUL GAUGES SECTION (4 COLUMNS - ₹ RUPEE)
+# 2. 4 COLOURFUL GAUGES SECTION
 # ---------------------------------------------------------
 st.subheader("🎯 performance gauges")
 
@@ -183,8 +195,8 @@ with g1:
     fig_sales = go.Figure(go.Indicator(
         mode = "gauge+number",
         value = total_sales,
-        number = {'prefix': "₹", 'valueformat': ",.0f", 'font': {'size': 14}},
-        title = {'text': "total sales", 'font': {'size': 14, 'color': 'white'}},
+        number = {'prefix': "₹", 'valueformat': ",.0f", 'font': {'size': 14, 'color': 'white'}},
+        title = {'text': "total sales", 'font': {'size': 14, 'color': '#00f5d4'}},
         gauge = {
             'axis': {'range': [0, 5000000], 'tickfont': {'color': 'white', 'size': 10}},
             'bar': {'color': "#00f5d4"},
@@ -198,8 +210,8 @@ with g2:
     fig_profit = go.Figure(go.Indicator(
         mode = "gauge+number",
         value = total_profit,
-        number = {'prefix': "₹", 'valueformat': ",.0f", 'font': {'size': 14}},
-        title = {'text': "total profit", 'font': {'size': 14, 'color': 'white'}},
+        number = {'prefix': "₹", 'valueformat': ",.0f", 'font': {'size': 14, 'color': 'white'}},
+        title = {'text': "total profit", 'font': {'size': 14, 'color': '#00f5d4'}},
         gauge = {
             'axis': {'range': [0, 1000000], 'tickfont': {'color': 'white', 'size': 10}},
             'bar': {'color': "#2ec4b6"},
@@ -213,8 +225,8 @@ with g3:
     fig_orders = go.Figure(go.Indicator(
         mode = "gauge+number",
         value = total_orders,
-        number = {'valueformat': ",.0f", 'font': {'size': 16}},
-        title = {'text': "total orders", 'font': {'size': 14, 'color': 'white'}},
+        number = {'valueformat': ",.0f", 'font': {'size': 16, 'color': 'white'}},
+        title = {'text': "total orders", 'font': {'size': 14, 'color': '#00f5d4'}},
         gauge = {
             'axis': {'range': [0, 10000], 'tickfont': {'color': 'white', 'size': 10}},
             'bar': {'color': "#ff9f1c"},
@@ -228,8 +240,8 @@ with g4:
     fig_rating = go.Figure(go.Indicator(
         mode = "gauge+number",
         value = avg_rating,
-        number = {'valueformat': ".2f", 'suffix': " / 5", 'font': {'size': 14}},
-        title = {'text': "customer rating", 'font': {'size': 14, 'color': 'white'}},
+        number = {'valueformat': ".2f", 'suffix': " / 5", 'font': {'size': 14, 'color': 'white'}},
+        title = {'text': "customer rating", 'font': {'size': 14, 'color': '#00f5d4'}},
         gauge = {
             'axis': {'range': [0, 5], 'tickfont': {'color': 'white', 'size': 10}},
             'bar': {'color': "#ff5722"},
@@ -242,7 +254,7 @@ with g4:
 st.markdown("---")
 
 # ---------------------------------------------------------
-# 3. OTHER GRAPHS SECTION (VERTICAL ONE BY ONE - ₹ RUPEE)
+# 3. OTHER GRAPHS SECTION
 # ---------------------------------------------------------
 
 st.subheader("📈 top product categories by sales")
@@ -313,7 +325,7 @@ st.plotly_chart(fig_payment, use_container_width=True)
 st.markdown("---")
 
 # ---------------------------------------------------------
-# 4. NEW: SCATTER PLOT (Quantity vs Sales Amount)
+# 4. SCATTER PLOT SECTION
 # ---------------------------------------------------------
 st.subheader("📊 scatter plot: quantity vs sales amount")
 fig_scatter = px.scatter(
@@ -336,7 +348,7 @@ st.plotly_chart(fig_scatter, use_container_width=True)
 st.markdown("---")
 
 # ---------------------------------------------------------
-# 5. NEW: BOX PLOT (Profit distribution across Product Category)
+# 5. BOX PLOT SECTION
 # ---------------------------------------------------------
 st.subheader("📦 box plot: profit distribution by product category")
 fig_box = px.box(
