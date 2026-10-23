@@ -103,7 +103,7 @@ def load_and_clean_data():
         df.loc[df['Payment_Method'].str.lower().str.contains('credit', na=False), 'Payment_Method'] = 'Credit Card'
             
     if 'Order_Date' in df.columns:
-        df['Order_Date'] = pd.to_datetime(df['Order_Date'])
+        df['Order_Date'] = pd.to_datetime(df['Order_Date'], errors='coerce')
         df['Order_Year'] = df['Order_Date'].dt.year
         
     return df
@@ -248,7 +248,7 @@ with g4:
 st.markdown("---")
 
 # ---------------------------------------------------------
-# 3. GRAPHS SECTION
+# 3. GRAPHS SECTION (Safe Execution Blocks)
 # ---------------------------------------------------------
 
 if 'Product_Category' in filtered_df.columns and 'Sales_Amount' in filtered_df.columns:
@@ -261,7 +261,7 @@ if 'Product_Category' in filtered_df.columns and 'Sales_Amount' in filtered_df.c
 
 if 'Order_Date' in filtered_df.columns and 'Sales_Amount' in filtered_df.columns:
     st.subheader("📉 sales trend over months")
-    filtered_df['Month'] = filtered_df['Order_Date'].dt.to_period('M').astype(str)
+    filtered_df['Month'] = filtered_df['Order_Date'].astype(str).str[:7] # Safe month extraction
     monthly_sales = filtered_df.groupby('Month')['Sales_Amount'].sum().reset_index()
     fig_time = px.line(monthly_sales, x='Month', y='Sales_Amount', markers=True)
     fig_time.update_layout(xaxis_title="month", yaxis_title="sales amount (₹)", paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', font=dict(color='white'))
